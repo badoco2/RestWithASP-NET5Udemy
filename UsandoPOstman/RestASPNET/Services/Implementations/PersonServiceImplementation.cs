@@ -1,4 +1,5 @@
 ﻿using RestASPNET.Model;
+using RestASPNET.Model.Context;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,63 +10,90 @@ namespace RestASPNET.Services.Implementations
 {
     public class PersonServiceImplementation : IPersonService
     {
-        private volatile int count;
+
+
+        private MySQLContext _context;
+        public PersonServiceImplementation(MySQLContext context)
+        {
+            _context = context;
+        }
 
         public Person Create(Person person)
         {
-            return (Person)person;
+            try
+            {
+                _context.Add(person);
+                _context.SaveChanges();
+
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            return person;
         }
 
         public void Delete(long id)
         {
-            throw new NotImplementedException();
+            var result = _context.Persons.SingleOrDefault(p => p.Id.Equals(id));
+            if (result != null)
+            {
+
+                try
+                {
+                    _context.Persons.Remove(result);
+                    _context.SaveChanges();
+
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+            }
+
         }
 
         public List<Person> FindAll()
         {
-            List<Person> persons = new List<Person>();
-            for(int i = 0; i <8; i++)
-            {
-                Person person = MockPerson(i);
-                persons.Add(person);
-            }
-            return persons;
+            return _context.Persons.ToList();
         }
 
         
 
         public Person FindByID(long id)
         {
-            return new Person
-            {
-                Id = IncrementAndGet(),
-                FirstName = "Leandro",
-                LastName = "Costa",
-                Address = "Uberlandia - Minas Gerais - Brasil",
-                Gender = "Male"
-            };
+            return _context.Persons.SingleOrDefault(p => p.Id.Equals(id));
         }
 
         public Person Update(Person person)
         {
-            return (Person)person;
-        }
+            if (!Exists(person.Id)) return new Person();
+            var result = _context.Persons.SingleOrDefault(p => p.Id.Equals(person.Id));
 
-        private Person MockPerson(int i)
-        {
-            return new Person
+            if (result != null)
             {
-                Id = IncrementAndGet(),
-                FirstName = "Person Name" + i,
-                LastName = "Person LastName" + i,
-                Address = "Some Address" + i,
-                Gender = "Male"
-            };
+
+                try
+                {
+                    _context.Entry(result).CurrentValues.SetValues(person);
+                    _context.SaveChanges();
+
+                }
+                catch (Exception)
+                {
+
+                    throw;
+                }
+            }
+
+            return person;
         }
 
-        private long IncrementAndGet()
+        private bool Exists(long id)
         {
-            return Interlocked.Increment(ref count);
+            return _context.Persons.Any(p => p.Id.Equals(id));
         }
     }
 }
